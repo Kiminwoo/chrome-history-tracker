@@ -58,14 +58,35 @@ function getRemainingTime(checkOutTime?: Date | null) {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
-function getDiceBearAvatarUrl(seed: string, style: string = 'avataaars') {
-  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
+function generateRandomString(length = 10) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+function getDiceBearAvatarUrl(seed:string, style:string = 'avataaars') {
+  // seed가 비어있거나 falsy하면 랜덤 문자열 생성
+  const finalSeed = seed && seed.trim() ? seed : generateRandomString(10);
+  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(finalSeed)}`;
 }
 
 // 오늘 날짜(YYYY-MM-DD) 문자열 반환
 function getTodayKey() {
   const now = new Date()
   return now.toISOString().slice(0, 10)
+}
+
+function getOrCreateGuestSeed() {
+  const key = 'guest_avatar_seed'
+  let seed = localStorage.getItem(key)
+  if (!seed) {
+    seed = generateRandomString(10)
+    localStorage.setItem(key, seed)
+  }
+  return seed
 }
 
 export default function App() {
@@ -76,13 +97,19 @@ export default function App() {
   const [now, setNow] = useState(new Date())
 
     useEffect(() => {
-    // 사용자 정보 가져오기
     chrome.identity?.getProfileUserInfo?.((userInfo) => {
+      let name;
+      let avatarSeed;
       if (userInfo?.email) {
-        const name = userInfo.email.split('@')[0];
-        setUserName(name);
-        setAvatarUrl(getDiceBearAvatarUrl(name));
+        name = userInfo.email.split('@')[0];
+        avatarSeed = name;
+      } else {
+        // email이 없을 때, localStorage에서 seed 재사용
+        name = getOrCreateGuestSeed();
+        avatarSeed = name;
       }
+      setUserName(name);
+      setAvatarUrl(getDiceBearAvatarUrl(avatarSeed));
     });
 
     // 오늘의 첫 방문 기록 가져오기 (storage + history 연동)
