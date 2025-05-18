@@ -62,6 +62,12 @@ function getDiceBearAvatarUrl(seed: string, style: string = 'avataaars') {
   return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
 }
 
+// 오늘 날짜(YYYY-MM-DD) 문자열 반환
+function getTodayKey() {
+  const now = new Date()
+  return now.toISOString().slice(0, 10)
+}
+
 export default function App() {
   const [firstHistory, setFirstHistory] = useState<HistoryItem | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -79,28 +85,39 @@ export default function App() {
       }
     });
 
-    // 오늘의 첫 방문 기록 가져오기
+    // 오늘의 첫 방문 기록 가져오기 (storage + history 연동)
     const fetchFirstHistory = async () => {
       try {
-        // 1. 오늘 자정 (로컬 타임존 기준) 계산
-        const todayStart = new Date()
-        todayStart.setHours(0, 0, 0, 0)
-        const results = await new Promise<HistoryItem[]>((resolve) => {
-          chrome.history.search(
-            { text: '', startTime: todayStart.getTime(),
-          maxResults: 2500, // 최대값으로 설정
-
-            },
-            (items) => resolve(items as HistoryItem[])
-          )
+        const todayKey = getTodayKey()
+        // 1. storage에서 오늘의 첫 방문 기록을 먼저 시도
+        chrome.storage.local.get([`firstVisit_${todayKey}`], async (result) => {
+          if (result && result[`firstVisit_${todayKey}`]) {
+            setFirstHistory(result[`firstVisit_${todayKey}`])
+            setIsLoading(false)
+          } else {
+            // 2. 없으면 history에서 찾아서 storage에 저장
+            const todayStart = new Date()
+            todayStart.setHours(0, 0, 0, 0)
+            const results = await new Promise<HistoryItem[]>((resolve) => {
+              chrome.history.search(
+                { text: '', startTime: todayStart.getTime(), maxResults: 2500 },
+                (items) => resolve(items as HistoryItem[])
+              )
+            })
+            const sorted = results
+              .filter((item) => item.lastVisitTime)
+              .sort((a, b) => (a.lastVisitTime! - b.lastVisitTime!))
+            const first = sorted[0] ?? null
+            setFirstHistory(first)
+            // 3. 찾은 기록을 storage에 저장
+            if (first) {
+              chrome.storage.local.set({ [`firstVisit_${todayKey}`]: first })
+            }
+            setIsLoading(false)
+          }
         })
-        const sorted = results
-          .filter((item) => item.lastVisitTime)
-          .sort((a, b) => (a.lastVisitTime! - b.lastVisitTime!))
-        setFirstHistory(sorted[0] ?? null)
       } catch (error) {
         console.error('Error fetching history:', error)
-      } finally {
         setIsLoading(false)
       }
     }
