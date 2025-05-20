@@ -6,8 +6,6 @@
     "history",
     "identity",
     "identity.email",
-    "activeTab",
-    "scripting",
     "storage"
   ],  
   "action": {
