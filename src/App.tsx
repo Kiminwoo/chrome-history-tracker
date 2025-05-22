@@ -64,6 +64,14 @@ function getRemainingTime(checkOutTime?: Date | null) {
     .padStart(2, "0")}`;
 }
 
+function formatTime24WithAmPm(date?: Date | null) {
+  if (!date) return "--:--";
+  const hour = date.getHours().toString().padStart(2, "0"); // 24시간제
+  const minute = date.getMinutes().toString().padStart(2, "0");
+  const ampm = date.getHours() < 12 ? "AM" : "PM";
+  return `${hour}:${minute} ${ampm}`;
+}
+
 function generateRandomString(length = 10) {
   const chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -222,7 +230,7 @@ export default function App() {
               출근 시간
             </Text>
             <div style={{ fontWeight: 700, fontSize: 18, color: "#1890ff" }}>
-              {formatTime(checkInTime)}
+              {formatTime24WithAmPm(checkInTime)}
             </div>
           </TimeCard>
         </Col>
@@ -232,7 +240,7 @@ export default function App() {
               퇴근 시간
             </Text>
             <div style={{ fontWeight: 700, fontSize: 18, color: "#1890ff" }}>
-              {formatTime(checkOutTime)}
+              {formatTime24WithAmPm(checkOutTime)}
             </div>
           </TimeCard>
         </Col>
