@@ -6,6 +6,7 @@ import {
 import styled from "@emotion/styled";
 import { Avatar, Card, Col, Divider, Row, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
+import Tutorial from "./components/Tutorial";
 import type { HistoryItem } from "./types/history";
 
 const { Title, Text } = Typography;
@@ -47,7 +48,7 @@ const TimerBox = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin: 16px 0;
+  margin: 16px 0 0 0;
 `;
 
 const TimerText = styled(Text)`
@@ -126,6 +127,8 @@ export default function App() {
   const [userName, setUserName] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [now, setNow] = useState(new Date());
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     chrome.identity?.getProfileUserInfo?.((userInfo) => {
@@ -253,6 +256,20 @@ export default function App() {
     }
   }, [firstHistory]);
 
+  useEffect(() => {
+    // 처음 방문 체크
+    const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
+    if (!hasSeenTutorial) {
+      // setShowTutorial(true);
+    }
+    setShowTutorial(true);
+  }, []);
+
+  const handleCloseTutorial = () => {
+    setShowTutorial(false);
+    localStorage.setItem("hasSeenTutorial", "true");
+  };
+
   return (
     <Container>
       {/* 사용자 정보 */}
@@ -363,6 +380,14 @@ export default function App() {
         />
         <TimerText>{getRemainingTime(checkOutTime)}</TimerText>
       </TimerBox>
+      {/* 튜토리얼 오버레이 */}
+      {showTutorial && (
+        <Tutorial
+          currentStep={tutorialStep}
+          onStepChange={setTutorialStep}
+          onClose={() => setShowTutorial(false)}
+        />
+      )}
     </Container>
   );
 }

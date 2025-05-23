@@ -3,6 +3,7 @@ import { ClockCircleOutlined, GlobalOutlined, UserOutlined, } from "@ant-design/
 import styled from "@emotion/styled";
 import { Avatar, Card, Col, Divider, Row, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
+import Tutorial from "./components/Tutorial";
 const { Title, Text } = Typography;
 const Container = styled.div `
   width: 340px;
@@ -38,7 +39,7 @@ const TimerBox = styled.div `
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin: 16px 0;
+  margin: 16px 0 0 0;
 `;
 const TimerText = styled(Text) `
   font-size: 2rem;
@@ -109,6 +110,8 @@ export default function App() {
     const [userName, setUserName] = useState("");
     const [avatarUrl, setAvatarUrl] = useState(undefined);
     const [now, setNow] = useState(new Date());
+    const [tutorialStep, setTutorialStep] = useState(0);
+    const [showTutorial, setShowTutorial] = useState(false);
     useEffect(() => {
         chrome.identity?.getProfileUserInfo?.((userInfo) => {
             let name;
@@ -167,7 +170,6 @@ export default function App() {
                 });
             }
             catch (error) {
-                console.error("Error fetching history:", error);
                 setIsLoading(false);
             }
         };
@@ -216,5 +218,17 @@ export default function App() {
             console.log("Date:", new Date(firstHistory.lastVisitTime));
         }
     }, [firstHistory]);
-    return (_jsxs(Container, { children: [_jsxs(Row, { align: "middle", gutter: 12, children: [_jsx(Col, { children: _jsx(Avatar, { size: 48, src: avatarUrl, icon: !avatarUrl && _jsx(UserOutlined, {}) }) }), _jsxs(Col, { flex: "auto", children: [_jsx(Title, { level: 5, style: { margin: 0, color: "#222" }, children: userName }), _jsx(Text, { type: "secondary", style: { fontSize: 13 }, children: "\uB9E4\uB2C8\uC800" })] })] }), _jsx(Divider, { style: { margin: "16px 0" } }), _jsx(Text, { strong: true, style: { fontSize: 15 }, children: "\uC624\uB298\uC758 \uCD9C\uADFC/\uD1F4\uADFC \uC2DC\uAC04 ( chrome history \uAE30\uC900 )" }), _jsxs(Row, { gutter: 8, style: { margin: "12px 0 0 0" }, children: [_jsx(Col, { span: 12, children: _jsxs(TimeCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uCD9C\uADFC \uC2DC\uAC04" }), _jsx("div", { style: { fontWeight: 700, fontSize: 18, color: "#1890ff" }, children: formatTime24WithAmPm(checkInTime) })] }) }), _jsx(Col, { span: 12, children: _jsxs(TimeCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uD1F4\uADFC \uC2DC\uAC04" }), _jsx("div", { style: { fontWeight: 700, fontSize: 18, color: "#1890ff" }, children: formatTime24WithAmPm(checkOutTime) })] }) })] }), _jsx(Divider, { style: { margin: "20px 0 12px 0" } }), _jsx(Text, { strong: true, style: { fontSize: 15 }, children: "\uC624\uB298\uC758 \uBE0C\uB77C\uC6B0\uC800 \uC811\uC18D\uAE30\uB85D" }), _jsxs(Row, { gutter: 8, style: { margin: "12px 0 0 0" }, children: [_jsx(Col, { span: 12, children: _jsxs(HistoryCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uCCAB \uC811\uC18D" }), _jsx("div", { style: { fontWeight: 700, fontSize: 16, color: "#52c41a" }, children: formatTime24WithAmPm(firstVisitTime) }), _jsxs(Text, { type: "secondary", style: { fontSize: 11 }, title: firstHistory?.url, children: [_jsx(GlobalOutlined, { style: { marginRight: 4 } }), extractDomain(firstHistory?.url)] })] }) }), _jsx(Col, { span: 12, children: _jsxs(HistoryCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uB9C8\uC9C0\uB9C9 \uC811\uC18D" }), _jsx("div", { style: { fontWeight: 700, fontSize: 16, color: "#faad14" }, children: formatTime24WithAmPm(lastVisitTime) }), _jsxs(Text, { type: "secondary", style: { fontSize: 11 }, title: lastHistory?.url, children: [_jsx(GlobalOutlined, { style: { marginRight: 4 } }), extractDomain(lastHistory?.url)] })] }) })] }), _jsx(Divider, { style: { margin: "20px 0 12px 0" } }), _jsx(Text, { strong: true, style: { fontSize: 15 }, children: "\uB0A8\uC740 \uC2DC\uAC04\u00A0" }), _jsx(Tag, { color: "blue", style: { marginTop: 8, marginBottom: 8 }, children: "\uC2E4\uC2DC\uAC04" }), _jsxs(TimerBox, { children: [_jsx(ClockCircleOutlined, { style: { fontSize: 32, color: "#1890ff", marginBottom: 8 } }), _jsx(TimerText, { children: getRemainingTime(checkOutTime) })] })] }));
+    useEffect(() => {
+        // 처음 방문 체크
+        const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
+        if (!hasSeenTutorial) {
+            // setShowTutorial(true);
+        }
+        setShowTutorial(true);
+    }, []);
+    const handleCloseTutorial = () => {
+        setShowTutorial(false);
+        localStorage.setItem("hasSeenTutorial", "true");
+    };
+    return (_jsxs(Container, { children: [_jsxs(Row, { align: "middle", gutter: 12, children: [_jsx(Col, { children: _jsx(Avatar, { size: 48, src: avatarUrl, icon: !avatarUrl && _jsx(UserOutlined, {}) }) }), _jsxs(Col, { flex: "auto", children: [_jsx(Title, { level: 5, style: { margin: 0, color: "#222" }, children: userName }), _jsx(Text, { type: "secondary", style: { fontSize: 13 }, children: "\uB9E4\uB2C8\uC800" })] })] }), _jsx(Divider, { style: { margin: "16px 0" } }), _jsx(Text, { strong: true, style: { fontSize: 15 }, children: "\uC624\uB298\uC758 \uCD9C\uADFC/\uD1F4\uADFC \uC2DC\uAC04 ( chrome history \uAE30\uC900 )" }), _jsxs(Row, { gutter: 8, style: { margin: "12px 0 0 0" }, children: [_jsx(Col, { span: 12, children: _jsxs(TimeCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uCD9C\uADFC \uC2DC\uAC04" }), _jsx("div", { style: { fontWeight: 700, fontSize: 18, color: "#1890ff" }, children: formatTime24WithAmPm(checkInTime) })] }) }), _jsx(Col, { span: 12, children: _jsxs(TimeCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uD1F4\uADFC \uC2DC\uAC04" }), _jsx("div", { style: { fontWeight: 700, fontSize: 18, color: "#1890ff" }, children: formatTime24WithAmPm(checkOutTime) })] }) })] }), _jsx(Divider, { style: { margin: "20px 0 12px 0" } }), _jsx(Text, { strong: true, style: { fontSize: 15 }, children: "\uC624\uB298\uC758 \uBE0C\uB77C\uC6B0\uC800 \uC811\uC18D\uAE30\uB85D" }), _jsxs(Row, { gutter: 8, style: { margin: "12px 0 0 0" }, children: [_jsx(Col, { span: 12, children: _jsxs(HistoryCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uCCAB \uC811\uC18D" }), _jsx("div", { style: { fontWeight: 700, fontSize: 16, color: "#52c41a" }, children: formatTime24WithAmPm(firstVisitTime) }), _jsxs(Text, { type: "secondary", style: { fontSize: 11 }, title: firstHistory?.url, children: [_jsx(GlobalOutlined, { style: { marginRight: 4 } }), extractDomain(firstHistory?.url)] })] }) }), _jsx(Col, { span: 12, children: _jsxs(HistoryCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uB9C8\uC9C0\uB9C9 \uC811\uC18D" }), _jsx("div", { style: { fontWeight: 700, fontSize: 16, color: "#faad14" }, children: formatTime24WithAmPm(lastVisitTime) }), _jsxs(Text, { type: "secondary", style: { fontSize: 11 }, title: lastHistory?.url, children: [_jsx(GlobalOutlined, { style: { marginRight: 4 } }), extractDomain(lastHistory?.url)] })] }) })] }), _jsx(Divider, { style: { margin: "20px 0 12px 0" } }), _jsx(Text, { strong: true, style: { fontSize: 15 }, children: "\uB0A8\uC740 \uC2DC\uAC04\u00A0" }), _jsx(Tag, { color: "blue", style: { marginTop: 8, marginBottom: 8 }, children: "\uC2E4\uC2DC\uAC04" }), _jsxs(TimerBox, { children: [_jsx(ClockCircleOutlined, { style: { fontSize: 32, color: "#1890ff", marginBottom: 8 } }), _jsx(TimerText, { children: getRemainingTime(checkOutTime) })] }), showTutorial && (_jsx(Tutorial, { currentStep: tutorialStep, onStepChange: setTutorialStep, onClose: () => setShowTutorial(false) }))] }));
 }
