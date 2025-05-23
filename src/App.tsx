@@ -1,4 +1,8 @@
-import { ClockCircleOutlined, UserOutlined } from "@ant-design/icons";
+import {
+  ClockCircleOutlined,
+  GlobalOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import styled from "@emotion/styled";
 import { Avatar, Card, Col, Divider, Row, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
@@ -25,6 +29,16 @@ const TimeCard = styled(Card)`
   }
 `;
 
+const HistoryCard = styled(Card)`
+  border-radius: 12px !important;
+  background: #f9f9f9 !important;
+  border: none !important;
+  margin-bottom: 0;
+  .ant-card-body {
+    padding: 12px 16px !important;
+  }
+`;
+
 const TimerBox = styled.div`
   background: #f6faff;
   border-radius: 12px;
@@ -43,15 +57,6 @@ const TimerText = styled(Text)`
   letter-spacing: 2px;
 `;
 
-function formatTime(date?: Date | null) {
-  if (!date) return "--:-- --";
-  return date.toLocaleTimeString("en-ko", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
 function getRemainingTime(checkOutTime?: Date | null) {
   if (!checkOutTime) return "--:--:--";
   const now = new Date();
@@ -66,10 +71,20 @@ function getRemainingTime(checkOutTime?: Date | null) {
 
 function formatTime24WithAmPm(date?: Date | null) {
   if (!date) return "--:--";
-  const hour = date.getHours().toString().padStart(2, "0"); // 24시간제
+  const hour = date.getHours().toString().padStart(2, "0");
   const minute = date.getMinutes().toString().padStart(2, "0");
   const ampm = date.getHours() < 12 ? "AM" : "PM";
   return `${hour}:${minute} ${ampm}`;
+}
+
+function extractDomain(url?: string) {
+  if (!url) return "알 수 없음";
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.replace("www.", "");
+  } catch {
+    return "알 수 없음";
+  }
 }
 
 function generateRandomString(length = 10) {
@@ -83,14 +98,12 @@ function generateRandomString(length = 10) {
 }
 
 function getDiceBearAvatarUrl(seed: string, style: string = "avataaars") {
-  // seed가 비어있거나 falsy하면 랜덤 문자열 생성
   const finalSeed = seed && seed.trim() ? seed : generateRandomString(10);
   return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(
     finalSeed
   )}`;
 }
 
-// 오늘 날짜(YYYY-MM-DD) 문자열 반환
 function getTodayKey() {
   const now = new Date();
   return now.toISOString().slice(0, 10);
@@ -108,6 +121,7 @@ function getOrCreateGuestSeed() {
 
 export default function App() {
   const [firstHistory, setFirstHistory] = useState<HistoryItem | null>(null);
+  const [lastHistory, setLastHistory] = useState<HistoryItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
@@ -121,7 +135,6 @@ export default function App() {
         name = userInfo.email.split("@")[0];
         avatarSeed = name;
       } else {
-        // email이 없을 때, localStorage에서 seed 재사용
         name = getOrCreateGuestSeed();
         avatarSeed = name;
       }
@@ -129,43 +142,85 @@ export default function App() {
       setAvatarUrl(getDiceBearAvatarUrl(avatarSeed));
     });
 
-    // 오늘의 첫 방문 기록 가져오기 (storage + history 연동)
-    const fetchFirstHistory = async () => {
+    // 오늘의 첫/마지막 방문 기록 가져오기
+    const fetchBrowserHistory = async () => {
       try {
         const todayKey = getTodayKey();
-        // 1. storage에서 오늘의 첫 방문 기록을 먼저 시도
-        chrome.storage.local.get([`firstVisit_${todayKey}`], async (result) => {
-          if (result && result[`firstVisit_${todayKey}`]) {
-            setFirstHistory(result[`firstVisit_${todayKey}`]);
-            setIsLoading(false);
-          } else {
-            // 2. 없으면 history에서 찾아서 storage에 저장
-            const todayStart = new Date();
-            todayStart.setHours(0, 0, 0, 0);
-            const results = await new Promise<HistoryItem[]>((resolve) => {
-              chrome.history.search(
-                { text: "", startTime: todayStart.getTime(), maxResults: 2500 },
-                (items) => resolve(items as HistoryItem[])
-              );
-            });
-            const sorted = results
-              .filter((item) => item.lastVisitTime)
-              .sort((a, b) => a.lastVisitTime! - b.lastVisitTime!);
-            const first = sorted[0] ?? null;
-            setFirstHistory(first);
-            // 3. 찾은 기록을 storage에 저장
-            if (first) {
-              chrome.storage.local.set({ [`firstVisit_${todayKey}`]: first });
+
+        // Storage에서 기존 기록 확인
+        chrome.storage.local.get(
+          [`firstVisit_${todayKey}`, `lastVisit_${todayKey}`],
+          async (result) => {
+            if (
+              result[`firstVisit_${todayKey}`] &&
+              result[`lastVisit_${todayKey}`]
+            ) {
+              // 캐시된 기록 사용
+              setFirstHistory(result[`firstVisit_${todayKey}`]);
+              setLastHistory(result[`lastVisit_${todayKey}`]);
+              setIsLoading(false);
+            } else {
+              // History에서 새로 검색
+              const todayStart = new Date();
+              todayStart.setHours(0, 0, 0, 0);
+
+              const results = await new Promise<HistoryItem[]>((resolve) => {
+                chrome.history.search(
+                  {
+                    text: "",
+                    startTime: todayStart.getTime(),
+                    maxResults: 2500,
+                  },
+                  (items) => resolve(items as HistoryItem[])
+                );
+              });
+
+              const sorted = results
+                .filter((item) => item.lastVisitTime)
+                .sort((a, b) => a.lastVisitTime! - b.lastVisitTime!);
+
+              const first = sorted[0] ?? null;
+              const last = sorted[sorted.length - 1] ?? null;
+
+              setFirstHistory(first);
+              setLastHistory(last);
+
+              // Storage에 저장
+              if (first && last) {
+                chrome.storage.local.set({
+                  [`firstVisit_${todayKey}`]: first,
+                  [`lastVisit_${todayKey}`]: last,
+                });
+              }
+              setIsLoading(false);
             }
-            setIsLoading(false);
           }
-        });
+        );
       } catch (error) {
-        console.error("Error fetching history:", error);
         setIsLoading(false);
       }
     };
-    fetchFirstHistory();
+
+    // 초기 기록 로드
+    fetchBrowserHistory();
+
+    // ⭐ Storage 변화 감지 리스너 등록
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const handleStorageChange = (changes: any, areaName: string) => {
+      if (areaName === "local") {
+        const todayKey = getTodayKey();
+        const lastVisitKey = `lastVisit_${todayKey}`;
+        if (changes[lastVisitKey]) {
+          setLastHistory(changes[lastVisitKey].newValue);
+        }
+      }
+    };
+    chrome.storage.onChanged.addListener(handleStorageChange);
+
+    // 정리
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
   }, []);
 
   // 출근/퇴근 시간 계산
@@ -176,6 +231,14 @@ export default function App() {
     ? new Date(checkInTime.getTime() + 9 * 60 * 60 * 1000)
     : null;
 
+  // 브라우저 접속 시간
+  const firstVisitTime = firstHistory?.lastVisitTime
+    ? new Date(firstHistory.lastVisitTime)
+    : null;
+  const lastVisitTime = lastHistory?.lastVisitTime
+    ? new Date(lastHistory.lastVisitTime)
+    : null;
+
   // 타이머 실시간 갱신
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -183,16 +246,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // ...
     if (firstHistory?.lastVisitTime) {
       console.log("출근 기록 원본:", firstHistory);
       console.log("lastVisitTime (ms):", firstHistory.lastVisitTime);
       console.log("Date:", new Date(firstHistory.lastVisitTime));
-      console.log(
-        "Locale:",
-        new Date(firstHistory.lastVisitTime).toLocaleString()
-      );
-      console.log("UTC:", new Date(firstHistory.lastVisitTime).toUTCString());
     }
   }, [firstHistory]);
 
@@ -221,7 +278,7 @@ export default function App() {
 
       {/* 출근/퇴근 시간 */}
       <Text strong style={{ fontSize: 15 }}>
-        오늘의 출근/퇴근 시간 ( chrome history 기준 ){" "}
+        오늘의 출근/퇴근 시간 ( chrome history 기준 )
       </Text>
       <Row gutter={8} style={{ margin: "12px 0 0 0" }}>
         <Col span={12}>
@@ -248,9 +305,54 @@ export default function App() {
 
       <Divider style={{ margin: "20px 0 12px 0" }} />
 
+      {/* 브라우저 접속 기록 */}
+      <Text strong style={{ fontSize: 15 }}>
+        오늘의 브라우저 접속기록
+      </Text>
+      <Row gutter={8} style={{ margin: "12px 0 0 0" }}>
+        <Col span={12}>
+          <HistoryCard>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              첫 접속
+            </Text>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "#52c41a" }}>
+              {formatTime24WithAmPm(firstVisitTime)}
+            </div>
+            <Text
+              type="secondary"
+              style={{ fontSize: 11 }}
+              title={firstHistory?.url}
+            >
+              <GlobalOutlined style={{ marginRight: 4 }} />
+              {extractDomain(firstHistory?.url)}
+            </Text>
+          </HistoryCard>
+        </Col>
+        <Col span={12}>
+          <HistoryCard>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              마지막 접속
+            </Text>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "#faad14" }}>
+              {formatTime24WithAmPm(lastVisitTime)}
+            </div>
+            <Text
+              type="secondary"
+              style={{ fontSize: 11 }}
+              title={lastHistory?.url}
+            >
+              <GlobalOutlined style={{ marginRight: 4 }} />
+              {extractDomain(lastHistory?.url)}
+            </Text>
+          </HistoryCard>
+        </Col>
+      </Row>
+
+      <Divider style={{ margin: "20px 0 12px 0" }} />
+
       {/* 남은 시간 */}
       <Text strong style={{ fontSize: 15 }}>
-        남은 시간{" "}
+        남은 시간&nbsp;
       </Text>
       <Tag color="blue" style={{ marginTop: 8, marginBottom: 8 }}>
         실시간
@@ -261,15 +363,6 @@ export default function App() {
         />
         <TimerText>{getRemainingTime(checkOutTime)}</TimerText>
       </TimerBox>
-
-      {/* <Space direction="horizontal" align="center" style={{ width: '100%', marginTop: 8 }}>
-        <Tag icon={<ClockCircleOutlined />} color="warning">
-          타이머
-        </Tag>
-        <Text strong style={{ fontSize: 18 }}>
-          {getRemainingTime(checkOutTime)}
-        </Text>
-      </Space> */}
     </Container>
   );
 }
