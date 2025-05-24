@@ -6,7 +6,6 @@ import {
 import styled from "@emotion/styled";
 import { Avatar, Card, Col, Divider, Row, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
-import Tutorial from "./components/Tutorial";
 import type { HistoryItem } from "./types/history";
 
 const { Title, Text } = Typography;
@@ -347,12 +346,13 @@ export default function App() {
     <Container>
       {/* 사용자 정보 */}
             {/* 사용자 정보 섹션 */}
-      <HighlightableRow 
+      {/* <HighlightableRow 
         $highlight={showTutorial && tutorialStep === 0}
         data-tutorial="user-info"
         align="middle" 
         gutter={12}
-      >
+      > */}
+      <Row align="middle" gutter={12}>
 
         <Col>
           <Avatar
@@ -369,7 +369,8 @@ export default function App() {
             매니저
           </Text>
         </Col>
-      </HighlightableRow>
+      {/* </HighlightableRow> */}
+      </Row>
 
       <Divider style={{ margin: "16px 0" }} />
 
@@ -378,12 +379,14 @@ export default function App() {
       <Text strong style={{ fontSize: 15, margin: "0 0 12px 0"}}>
         오늘의 출근/퇴근 시간 ( chrome history 기준 )
       </Text>
-     <HighlightableRow
+     {/* <HighlightableRow
         $highlight={showTutorial && tutorialStep === 1}
         data-tutorial="work-time"
         gutter={8}
         style={{ margin: "12px 0 0 0" }}
-      >
+      > */}
+            <Row gutter={8} style={{ margin: "12px 0 0 0" }}>
+
         <Col span={12}>
           <TimeCard
           >
@@ -406,14 +409,17 @@ export default function App() {
             </div>
           </TimeCard>
         </Col>
-    </HighlightableRow>
+      </Row>
+
+    {/* </HighlightableRow> */}
       <Divider style={{ margin: "20px 0 12px 0" }} />
 
       {/* 브라우저 접속 기록 */}
       <Text strong style={{ fontSize: 15 }}>
         오늘의 브라우저 접속기록
       </Text>
-      <HighlightableRow $highlight={showTutorial && tutorialStep === 2} data-tutorial="browser-history"  gutter={8} style={{ margin: "12px 0 0 0" }}>
+      {/* <HighlightableRow $highlight={showTutorial && tutorialStep === 2} data-tutorial="browser-history"  gutter={8} style={{ margin: "12px 0 0 0" }}> */}
+      <Row gutter={8} style={{ margin: "12px 0 0 0" }}>
 
         <Col span={12}>
           <HistoryCard>
@@ -452,17 +458,18 @@ export default function App() {
             </Text>
           </HistoryCard>
         </Col>
-      </HighlightableRow >
+      </Row>
+      {/* </HighlightableRow > */}
 
       <Divider style={{ margin: "20px 0 12px 0" }} />
 
       {/* 남은 시간 */}
 
-      <HighlightableRow
+      {/* <HighlightableRow
         $highlight={showTutorial && tutorialStep === 3}
         data-tutorial="remaining-time"
         style={{ marginTop: 16 }} // 필요시 마진 조정
-      >
+      > */}
       <Col span={24}>
 
         <Text strong style={{ fontSize: 15 }}>
@@ -478,16 +485,16 @@ export default function App() {
           <TimerText>{getRemainingTime(checkOutTime)}</TimerText>
         </TimerBox>
           </Col>
-      </HighlightableRow>
+      {/* </HighlightableRow> */}
       {/* 튜토리얼 오버레이 */}
-      {showTutorial && (
+      {/* {showTutorial && (
         <Tutorial
         steps={TUTORIAL_STEPS} 
           currentStep={tutorialStep}
           onStepChange={(step) => setTutorialStep(step)}
           onClose={() => setShowTutorial(false)}
         />
-      )}
+      )} */}
     </Container>
   );
 }
