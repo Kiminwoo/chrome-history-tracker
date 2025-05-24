@@ -5,13 +5,45 @@ import { Avatar, Card, Col, Divider, Row, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
 import Tutorial from "./components/Tutorial";
 const { Title, Text } = Typography;
+// 튜토리얼 단계 정의
+const TUTORIAL_STEPS = [
+    {
+        id: "user-info",
+        title: "사용자 정보",
+        description: "현재 로그인된 사용자 정보와 아바타가 표시됩니다.",
+        target: "user-info",
+        position: "bottom",
+    },
+    {
+        id: "work-time",
+        title: "출근/퇴근 시간",
+        description: "Chrome 브라우저 히스토리를 기반으로 자동 계산된 출근/퇴근 시간입니다.",
+        target: "work-time",
+        position: "bottom",
+    },
+    {
+        id: "browser-history",
+        title: "브라우저 접속기록",
+        description: "오늘 첫 번째 접속과 마지막 접속 시간을 보여줍니다.",
+        target: "browser-history",
+        position: "top",
+    },
+    {
+        id: "remaining-time",
+        title: "남은 시간",
+        description: "퇴근까지 남은 시간이 실시간으로 표시됩니다.",
+        target: "remaining-time",
+        position: "top",
+    },
+];
 const Container = styled.div `
   width: 340px;
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 2px 16px rgba(24, 144, 255, 0.13);
-  padding: 24px 16px 16px 16px;
+  padding: 8px 16px 16px 16px;
   font-family: "Pretendard", "Noto Sans KR", sans-serif;
+  position: relative;
 `;
 const TimeCard = styled(Card) `
   border-radius: 12px !important;
@@ -46,6 +78,17 @@ const TimerText = styled(Text) `
   font-weight: 700;
   color: #1890ff;
   letter-spacing: 2px;
+`;
+const HighlightableRow = styled(Row) `
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: ${({ $highlight }) => ($highlight ? "relative" : "static")};
+  border: 2px solid ${({ $highlight }) => ($highlight ? "#1890ff" : "transparent")};
+  border-radius: 8px;
+  box-shadow: ${({ $highlight }) => $highlight ? "0 0 20px rgba(24, 144, 255, 0.3)" : "none"};
+  background: ${({ $highlight }) => $highlight ? "rgba(24, 144, 255, 0.05)" : "transparent"};
+  margin: ${({ $highlight }) => ($highlight ? "10px 0" : "0")};
+  padding: ${({ $highlight }) => ($highlight ? "16px" : "0")};
+  z-index: ${({ $highlight }) => ($highlight ? 1100 : "auto")};
 `;
 function getRemainingTime(checkOutTime) {
     if (!checkOutTime)
@@ -112,6 +155,7 @@ export default function App() {
     const [now, setNow] = useState(new Date());
     const [tutorialStep, setTutorialStep] = useState(0);
     const [showTutorial, setShowTutorial] = useState(false);
+    const [targetRect, setTargetRect] = useState(null);
     useEffect(() => {
         chrome.identity?.getProfileUserInfo?.((userInfo) => {
             let name;
@@ -186,12 +230,29 @@ export default function App() {
                 }
             }
         };
-        chrome.storage.onChanged.addListener(handleStorageChange);
-        // 정리
+        // 개발 모드가 아닐 때만 리스너 등록
+        if (import.meta.env.PROD) {
+            chrome.storage.onChanged.addListener(handleStorageChange);
+        }
         return () => {
-            chrome.storage.onChanged.removeListener(handleStorageChange);
+            if (import.meta.env.PROD) {
+                chrome.storage.onChanged.removeListener(handleStorageChange);
+            }
         };
     }, []);
+    // 튜토리얼 컨트롤 핸들러
+    const handleTutorialNext = () => {
+        if (tutorialStep < TUTORIAL_STEPS.length - 1) {
+            setTutorialStep((prev) => prev + 1);
+        }
+        else {
+            setShowTutorial(false);
+            localStorage.setItem("hasSeenTutorial", "true");
+        }
+    };
+    const handleTutorialPrev = () => {
+        setTutorialStep((prev) => Math.max(0, prev - 1));
+    };
     // 출근/퇴근 시간 계산
     const checkInTime = firstHistory?.lastVisitTime
         ? new Date(firstHistory.lastVisitTime)
@@ -213,9 +274,11 @@ export default function App() {
     }, []);
     useEffect(() => {
         if (firstHistory?.lastVisitTime) {
-            console.log("출근 기록 원본:", firstHistory);
-            console.log("lastVisitTime (ms):", firstHistory.lastVisitTime);
-            console.log("Date:", new Date(firstHistory.lastVisitTime));
+            console.log('출근 기록 원본:', firstHistory);
+            console.log('lastVisitTime (ms):', firstHistory.lastVisitTime);
+            console.log('Date:', new Date(firstHistory.lastVisitTime));
+            console.log('Locale:', new Date(firstHistory.lastVisitTime).toLocaleString());
+            console.log('UTC:', new Date(firstHistory.lastVisitTime).toUTCString());
         }
     }, [firstHistory]);
     useEffect(() => {
@@ -230,5 +293,5 @@ export default function App() {
         setShowTutorial(false);
         localStorage.setItem("hasSeenTutorial", "true");
     };
-    return (_jsxs(Container, { children: [_jsxs(Row, { align: "middle", gutter: 12, children: [_jsx(Col, { children: _jsx(Avatar, { size: 48, src: avatarUrl, icon: !avatarUrl && _jsx(UserOutlined, {}) }) }), _jsxs(Col, { flex: "auto", children: [_jsx(Title, { level: 5, style: { margin: 0, color: "#222" }, children: userName }), _jsx(Text, { type: "secondary", style: { fontSize: 13 }, children: "\uB9E4\uB2C8\uC800" })] })] }), _jsx(Divider, { style: { margin: "16px 0" } }), _jsx(Text, { strong: true, style: { fontSize: 15 }, children: "\uC624\uB298\uC758 \uCD9C\uADFC/\uD1F4\uADFC \uC2DC\uAC04 ( chrome history \uAE30\uC900 )" }), _jsxs(Row, { gutter: 8, style: { margin: "12px 0 0 0" }, children: [_jsx(Col, { span: 12, children: _jsxs(TimeCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uCD9C\uADFC \uC2DC\uAC04" }), _jsx("div", { style: { fontWeight: 700, fontSize: 18, color: "#1890ff" }, children: formatTime24WithAmPm(checkInTime) })] }) }), _jsx(Col, { span: 12, children: _jsxs(TimeCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uD1F4\uADFC \uC2DC\uAC04" }), _jsx("div", { style: { fontWeight: 700, fontSize: 18, color: "#1890ff" }, children: formatTime24WithAmPm(checkOutTime) })] }) })] }), _jsx(Divider, { style: { margin: "20px 0 12px 0" } }), _jsx(Text, { strong: true, style: { fontSize: 15 }, children: "\uC624\uB298\uC758 \uBE0C\uB77C\uC6B0\uC800 \uC811\uC18D\uAE30\uB85D" }), _jsxs(Row, { gutter: 8, style: { margin: "12px 0 0 0" }, children: [_jsx(Col, { span: 12, children: _jsxs(HistoryCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uCCAB \uC811\uC18D" }), _jsx("div", { style: { fontWeight: 700, fontSize: 16, color: "#52c41a" }, children: formatTime24WithAmPm(firstVisitTime) }), _jsxs(Text, { type: "secondary", style: { fontSize: 11 }, title: firstHistory?.url, children: [_jsx(GlobalOutlined, { style: { marginRight: 4 } }), extractDomain(firstHistory?.url)] })] }) }), _jsx(Col, { span: 12, children: _jsxs(HistoryCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uB9C8\uC9C0\uB9C9 \uC811\uC18D" }), _jsx("div", { style: { fontWeight: 700, fontSize: 16, color: "#faad14" }, children: formatTime24WithAmPm(lastVisitTime) }), _jsxs(Text, { type: "secondary", style: { fontSize: 11 }, title: lastHistory?.url, children: [_jsx(GlobalOutlined, { style: { marginRight: 4 } }), extractDomain(lastHistory?.url)] })] }) })] }), _jsx(Divider, { style: { margin: "20px 0 12px 0" } }), _jsx(Text, { strong: true, style: { fontSize: 15 }, children: "\uB0A8\uC740 \uC2DC\uAC04\u00A0" }), _jsx(Tag, { color: "blue", style: { marginTop: 8, marginBottom: 8 }, children: "\uC2E4\uC2DC\uAC04" }), _jsxs(TimerBox, { children: [_jsx(ClockCircleOutlined, { style: { fontSize: 32, color: "#1890ff", marginBottom: 8 } }), _jsx(TimerText, { children: getRemainingTime(checkOutTime) })] }), showTutorial && (_jsx(Tutorial, { currentStep: tutorialStep, onStepChange: setTutorialStep, onClose: () => setShowTutorial(false) }))] }));
+    return (_jsxs(Container, { children: [_jsxs(HighlightableRow, { "$highlight": showTutorial && tutorialStep === 0, "data-tutorial": "user-info", align: "middle", gutter: 12, children: [_jsx(Col, { children: _jsx(Avatar, { size: 48, src: avatarUrl, icon: !avatarUrl && _jsx(UserOutlined, {}) }) }), _jsxs(Col, { flex: "auto", children: [_jsx(Title, { level: 5, style: { margin: 0, color: "#222" }, children: userName }), _jsx(Text, { type: "secondary", style: { fontSize: 13 }, children: "\uB9E4\uB2C8\uC800" })] })] }), _jsx(Divider, { style: { margin: "16px 0" } }), _jsx(Text, { strong: true, style: { fontSize: 15, margin: "0 0 12px 0" }, children: "\uC624\uB298\uC758 \uCD9C\uADFC/\uD1F4\uADFC \uC2DC\uAC04 ( chrome history \uAE30\uC900 )" }), _jsxs(HighlightableRow, { "$highlight": showTutorial && tutorialStep === 1, "data-tutorial": "work-time", gutter: 8, style: { margin: "12px 0 0 0" }, children: [_jsx(Col, { span: 12, children: _jsxs(TimeCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uCD9C\uADFC \uC2DC\uAC04" }), _jsx("div", { style: { fontWeight: 700, fontSize: 18, color: "#1890ff" }, children: formatTime24WithAmPm(checkInTime) })] }) }), _jsx(Col, { span: 12, children: _jsxs(TimeCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uD1F4\uADFC \uC2DC\uAC04" }), _jsx("div", { style: { fontWeight: 700, fontSize: 18, color: "#1890ff" }, children: formatTime24WithAmPm(checkOutTime) })] }) })] }), _jsx(Divider, { style: { margin: "20px 0 12px 0" } }), _jsx(Text, { strong: true, style: { fontSize: 15 }, children: "\uC624\uB298\uC758 \uBE0C\uB77C\uC6B0\uC800 \uC811\uC18D\uAE30\uB85D" }), _jsxs(HighlightableRow, { "$highlight": showTutorial && tutorialStep === 2, "data-tutorial": "browser-history", gutter: 8, style: { margin: "12px 0 0 0" }, children: [_jsx(Col, { span: 12, children: _jsxs(HistoryCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uCCAB \uC811\uC18D" }), _jsx("div", { style: { fontWeight: 700, fontSize: 16, color: "#52c41a" }, children: formatTime24WithAmPm(firstVisitTime) }), _jsxs(Text, { type: "secondary", style: { fontSize: 11 }, title: firstHistory?.url, children: [_jsx(GlobalOutlined, { style: { marginRight: 4 } }), extractDomain(firstHistory?.url)] })] }) }), _jsx(Col, { span: 12, children: _jsxs(HistoryCard, { children: [_jsx(Text, { type: "secondary", style: { fontSize: 12 }, children: "\uB9C8\uC9C0\uB9C9 \uC811\uC18D" }), _jsx("div", { style: { fontWeight: 700, fontSize: 16, color: "#faad14" }, children: formatTime24WithAmPm(lastVisitTime) }), _jsxs(Text, { type: "secondary", style: { fontSize: 11 }, title: lastHistory?.url, children: [_jsx(GlobalOutlined, { style: { marginRight: 4 } }), extractDomain(lastHistory?.url)] })] }) })] }), _jsx(Divider, { style: { margin: "20px 0 12px 0" } }), _jsx(HighlightableRow, { "$highlight": showTutorial && tutorialStep === 3, "data-tutorial": "remaining-time", style: { marginTop: 16 }, children: _jsxs(Col, { span: 24, children: [_jsx(Text, { strong: true, style: { fontSize: 15 }, children: "\uB0A8\uC740 \uC2DC\uAC04\u00A0" }), _jsx(Tag, { color: "blue", style: { marginTop: 8, marginBottom: 8 }, children: "\uC2E4\uC2DC\uAC04" }), _jsxs(TimerBox, { children: [_jsx(ClockCircleOutlined, { style: { fontSize: 32, color: "#1890ff", marginBottom: 8 } }), _jsx(TimerText, { children: getRemainingTime(checkOutTime) })] })] }) }), showTutorial && (_jsx(Tutorial, { steps: TUTORIAL_STEPS, currentStep: tutorialStep, onStepChange: (step) => setTutorialStep(step), onClose: () => setShowTutorial(false) }))] }));
 }

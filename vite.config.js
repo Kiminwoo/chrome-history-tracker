@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
+import { defineConfig } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 export default defineConfig({
     base: './',
@@ -20,5 +20,8 @@ export default defineConfig({
                 { src: 'public/icons/*', dest: 'dist/icons' }
             ]
         })
-    ]
+    ],
+    define: {
+        __IS_DEV__: process.env.NODE_ENV === 'development'
+    }
 });
