@@ -22,7 +22,8 @@ const TUTORIAL_STEPS = [
   {
     id: "work-time",
     title: "출근/퇴근 시간",
-    description: "Chrome 브라우저 히스토리를 기반으로 자동 계산된 출근/퇴근 시간입니다.",
+    description:
+      "Chrome 브라우저 히스토리를 기반으로 자동 계산된 출근/퇴근 시간입니다.",
     target: "work-time",
     position: "bottom" as const,
   },
@@ -41,8 +42,6 @@ const TUTORIAL_STEPS = [
     position: "top" as const,
   },
 ] as const;
-
-
 
 const Container = styled.div`
   width: 340px;
@@ -95,7 +94,8 @@ const TimerText = styled(Text)`
 const HighlightableRow = styled(Row)<{ $highlight: boolean }>`
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: ${({ $highlight }) => ($highlight ? "relative" : "static")};
-  border: 2px solid ${({ $highlight }) => ($highlight ? "#1890ff" : "transparent")};
+  border: 2px solid
+    ${({ $highlight }) => ($highlight ? "#1890ff" : "transparent")};
   border-radius: 8px;
   box-shadow: ${({ $highlight }) =>
     $highlight ? "0 0 20px rgba(24, 144, 255, 0.3)" : "none"};
@@ -199,55 +199,38 @@ export default function App() {
       try {
         const todayKey = getTodayKey();
 
-        // Storage에서 기존 기록 확인
-        chrome.storage.local.get(
-          [`firstVisit_${todayKey}`, `lastVisit_${todayKey}`],
-          async (result) => {
-            if (
-              result[`firstVisit_${todayKey}`] &&
-              result[`lastVisit_${todayKey}`]
-            ) {
-              // 캐시된 기록 사용
-              setFirstHistory(result[`firstVisit_${todayKey}`]);
-              setLastHistory(result[`lastVisit_${todayKey}`]);
-              setIsLoading(false);
-            } else {
-              // History에서 새로 검색
-              const todayStart = new Date();
-              todayStart.setHours(0, 0, 0, 0);
-
-              const results = await new Promise<HistoryItem[]>((resolve) => {
-                chrome.history.search(
-                  {
-                    text: "",
-                    startTime: todayStart.getTime(),
-                    maxResults: 2500,
-                  },
-                  (items) => resolve(items as HistoryItem[])
-                );
-              });
-
-              const sorted = results
-                .filter((item) => item.lastVisitTime)
-                .sort((a, b) => a.lastVisitTime! - b.lastVisitTime!);
-
-              const first = sorted[0] ?? null;
-              const last = sorted[sorted.length - 1] ?? null;
-
-              setFirstHistory(first);
-              setLastHistory(last);
-
-              // Storage에 저장
-              if (first && last) {
-                chrome.storage.local.set({
-                  [`firstVisit_${todayKey}`]: first,
-                  [`lastVisit_${todayKey}`]: last,
-                });
-              }
-              setIsLoading(false);
-            }
+        // 1. 마지막 방문 기록은 storage에서 조회
+        chrome.storage.local.get([`lastVisit_${todayKey}`], async (result) => {
+          if (result[`lastVisit_${todayKey}`]) {
+            setLastHistory(result[`lastVisit_${todayKey}`]);
+          } else {
+            setLastHistory(null);
           }
-        );
+
+          // 2. 첫 방문 기록은 항상 history에서 검색
+          const todayStart = new Date();
+          todayStart.setHours(0, 0, 0, 0);
+
+          const results = await new Promise<HistoryItem[]>((resolve) => {
+            chrome.history.search(
+              {
+                text: "",
+                startTime: todayStart.getTime(),
+                maxResults: 2500,
+              },
+              (items) => resolve(items as HistoryItem[])
+            );
+          });
+
+          const sorted = results
+            .filter((item) => item.lastVisitTime)
+            .sort((a, b) => a.lastVisitTime! - b.lastVisitTime!);
+
+          const first = sorted[0] ?? null;
+          setFirstHistory(first);
+
+          setIsLoading(false);
+        });
       } catch (error) {
         setIsLoading(false);
       }
@@ -256,7 +239,7 @@ export default function App() {
     // 초기 기록 로드
     fetchBrowserHistory();
 
-    // ⭐ Storage 변화 감지 리스너 등록
+    // Storage 변화 감지 리스너 등록
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const handleStorageChange = (changes: any, areaName: string) => {
       if (areaName === "local") {
@@ -267,19 +250,16 @@ export default function App() {
         }
       }
     };
- 
 
-      // 개발 모드가 아닐 때만 리스너 등록
-  if (import.meta.env.PROD) {
-    chrome.storage.onChanged.addListener(handleStorageChange);
-  }
-
-  return () => {
     if (import.meta.env.PROD) {
-      chrome.storage.onChanged.removeListener(handleStorageChange);
+      chrome.storage.onChanged.addListener(handleStorageChange);
     }
-  };
 
+    return () => {
+      if (import.meta.env.PROD) {
+        chrome.storage.onChanged.removeListener(handleStorageChange);
+      }
+    };
   }, []);
 
   // 튜토리얼 컨트롤 핸들러
@@ -319,13 +299,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-        if (firstHistory?.lastVisitTime) {
-            console.log('출근 기록 원본:', firstHistory);
-            console.log('lastVisitTime (ms):', firstHistory.lastVisitTime);
-            console.log('Date:', new Date(firstHistory.lastVisitTime));
-            console.log('Locale:', new Date(firstHistory.lastVisitTime).toLocaleString());
-            console.log('UTC:', new Date(firstHistory.lastVisitTime).toUTCString());
-        }
+    if (firstHistory?.lastVisitTime) {
+      console.log("출근 기록 원본:", firstHistory);
+      console.log("lastVisitTime (ms):", firstHistory.lastVisitTime);
+      console.log("Date:", new Date(firstHistory.lastVisitTime));
+      console.log(
+        "Locale:",
+        new Date(firstHistory.lastVisitTime).toLocaleString()
+      );
+      console.log("UTC:", new Date(firstHistory.lastVisitTime).toUTCString());
+    }
   }, [firstHistory]);
 
   useEffect(() => {
@@ -345,7 +328,7 @@ export default function App() {
   return (
     <Container>
       {/* 사용자 정보 */}
-            {/* 사용자 정보 섹션 */}
+      {/* 사용자 정보 섹션 */}
       {/* <HighlightableRow 
         $highlight={showTutorial && tutorialStep === 0}
         data-tutorial="user-info"
@@ -353,7 +336,6 @@ export default function App() {
         gutter={12}
       > */}
       <Row align="middle" gutter={12}>
-
         <Col>
           <Avatar
             size={48}
@@ -369,27 +351,25 @@ export default function App() {
             매니저
           </Text>
         </Col>
-      {/* </HighlightableRow> */}
+        {/* </HighlightableRow> */}
       </Row>
 
       <Divider style={{ margin: "16px 0" }} />
 
       {/* 출근/퇴근 시간 */}
- 
-      <Text strong style={{ fontSize: 15, margin: "0 0 12px 0"}}>
+
+      <Text strong style={{ fontSize: 15, margin: "0 0 12px 0" }}>
         오늘의 출근/퇴근 시간 ( chrome history 기준 )
       </Text>
-     {/* <HighlightableRow
+      {/* <HighlightableRow
         $highlight={showTutorial && tutorialStep === 1}
         data-tutorial="work-time"
         gutter={8}
         style={{ margin: "12px 0 0 0" }}
       > */}
-            <Row gutter={8} style={{ margin: "12px 0 0 0" }}>
-
+      <Row gutter={8} style={{ margin: "12px 0 0 0" }}>
         <Col span={12}>
-          <TimeCard
-          >
+          <TimeCard>
             <Text type="secondary" style={{ fontSize: 12 }}>
               출근 시간
             </Text>
@@ -399,8 +379,7 @@ export default function App() {
           </TimeCard>
         </Col>
         <Col span={12}>
-          <TimeCard
-          >
+          <TimeCard>
             <Text type="secondary" style={{ fontSize: 12 }}>
               퇴근 시간
             </Text>
@@ -411,7 +390,7 @@ export default function App() {
         </Col>
       </Row>
 
-    {/* </HighlightableRow> */}
+      {/* </HighlightableRow> */}
       <Divider style={{ margin: "20px 0 12px 0" }} />
 
       {/* 브라우저 접속 기록 */}
@@ -420,7 +399,6 @@ export default function App() {
       </Text>
       {/* <HighlightableRow $highlight={showTutorial && tutorialStep === 2} data-tutorial="browser-history"  gutter={8} style={{ margin: "12px 0 0 0" }}> */}
       <Row gutter={8} style={{ margin: "12px 0 0 0" }}>
-
         <Col span={12}>
           <HistoryCard>
             <Text type="secondary" style={{ fontSize: 12 }}>
@@ -471,7 +449,6 @@ export default function App() {
         style={{ marginTop: 16 }} // 필요시 마진 조정
       > */}
       <Col span={24}>
-
         <Text strong style={{ fontSize: 15 }}>
           남은 시간&nbsp;
         </Text>
@@ -484,7 +461,7 @@ export default function App() {
           />
           <TimerText>{getRemainingTime(checkOutTime)}</TimerText>
         </TimerBox>
-          </Col>
+      </Col>
       {/* </HighlightableRow> */}
       {/* 튜토리얼 오버레이 */}
       {/* {showTutorial && (

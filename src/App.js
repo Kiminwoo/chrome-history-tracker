@@ -81,7 +81,8 @@ const TimerText = styled(Text) `
 const HighlightableRow = styled(Row) `
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: ${({ $highlight }) => ($highlight ? "relative" : "static")};
-  border: 2px solid ${({ $highlight }) => ($highlight ? "#1890ff" : "transparent")};
+  border: 2px solid
+    ${({ $highlight }) => ($highlight ? "#1890ff" : "transparent")};
   border-radius: 8px;
   box-shadow: ${({ $highlight }) => $highlight ? "0 0 20px rgba(24, 144, 255, 0.3)" : "none"};
   background: ${({ $highlight }) => $highlight ? "rgba(24, 144, 255, 0.05)" : "transparent"};
@@ -174,42 +175,30 @@ export default function App() {
         const fetchBrowserHistory = async () => {
             try {
                 const todayKey = getTodayKey();
-                // Storage에서 기존 기록 확인
-                chrome.storage.local.get([`firstVisit_${todayKey}`, `lastVisit_${todayKey}`], async (result) => {
-                    if (result[`firstVisit_${todayKey}`] &&
-                        result[`lastVisit_${todayKey}`]) {
-                        // 캐시된 기록 사용
-                        setFirstHistory(result[`firstVisit_${todayKey}`]);
+                // 1. 마지막 방문 기록은 storage에서 조회
+                chrome.storage.local.get([`lastVisit_${todayKey}`], async (result) => {
+                    if (result[`lastVisit_${todayKey}`]) {
                         setLastHistory(result[`lastVisit_${todayKey}`]);
-                        setIsLoading(false);
                     }
                     else {
-                        // History에서 새로 검색
-                        const todayStart = new Date();
-                        todayStart.setHours(0, 0, 0, 0);
-                        const results = await new Promise((resolve) => {
-                            chrome.history.search({
-                                text: "",
-                                startTime: todayStart.getTime(),
-                                maxResults: 2500,
-                            }, (items) => resolve(items));
-                        });
-                        const sorted = results
-                            .filter((item) => item.lastVisitTime)
-                            .sort((a, b) => a.lastVisitTime - b.lastVisitTime);
-                        const first = sorted[0] ?? null;
-                        const last = sorted[sorted.length - 1] ?? null;
-                        setFirstHistory(first);
-                        setLastHistory(last);
-                        // Storage에 저장
-                        if (first && last) {
-                            chrome.storage.local.set({
-                                [`firstVisit_${todayKey}`]: first,
-                                [`lastVisit_${todayKey}`]: last,
-                            });
-                        }
-                        setIsLoading(false);
+                        setLastHistory(null);
                     }
+                    // 2. 첫 방문 기록은 항상 history에서 검색
+                    const todayStart = new Date();
+                    todayStart.setHours(0, 0, 0, 0);
+                    const results = await new Promise((resolve) => {
+                        chrome.history.search({
+                            text: "",
+                            startTime: todayStart.getTime(),
+                            maxResults: 2500,
+                        }, (items) => resolve(items));
+                    });
+                    const sorted = results
+                        .filter((item) => item.lastVisitTime)
+                        .sort((a, b) => a.lastVisitTime - b.lastVisitTime);
+                    const first = sorted[0] ?? null;
+                    setFirstHistory(first);
+                    setIsLoading(false);
                 });
             }
             catch (error) {
@@ -218,7 +207,7 @@ export default function App() {
         };
         // 초기 기록 로드
         fetchBrowserHistory();
-        // ⭐ Storage 변화 감지 리스너 등록
+        // Storage 변화 감지 리스너 등록
         /* eslint-disable @typescript-eslint/no-explicit-any */
         const handleStorageChange = (changes, areaName) => {
             if (areaName === "local") {
@@ -229,7 +218,6 @@ export default function App() {
                 }
             }
         };
-        // 개발 모드가 아닐 때만 리스너 등록
         if (import.meta.env.PROD) {
             chrome.storage.onChanged.addListener(handleStorageChange);
         }
@@ -273,11 +261,11 @@ export default function App() {
     }, []);
     useEffect(() => {
         if (firstHistory?.lastVisitTime) {
-            console.log('출근 기록 원본:', firstHistory);
-            console.log('lastVisitTime (ms):', firstHistory.lastVisitTime);
-            console.log('Date:', new Date(firstHistory.lastVisitTime));
-            console.log('Locale:', new Date(firstHistory.lastVisitTime).toLocaleString());
-            console.log('UTC:', new Date(firstHistory.lastVisitTime).toUTCString());
+            console.log("출근 기록 원본:", firstHistory);
+            console.log("lastVisitTime (ms):", firstHistory.lastVisitTime);
+            console.log("Date:", new Date(firstHistory.lastVisitTime));
+            console.log("Locale:", new Date(firstHistory.lastVisitTime).toLocaleString());
+            console.log("UTC:", new Date(firstHistory.lastVisitTime).toUTCString());
         }
     }, [firstHistory]);
     useEffect(() => {
